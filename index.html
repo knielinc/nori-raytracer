@@ -1,0 +1,943 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" type="image/vnd.microsoft.icon" href="../favicon.ico" />
+
+    <title>Report CG Project - Christian Knieling</title>
+
+    <link href="resources/bootstrap.min.css" rel="stylesheet">
+    <link href="resources/offcanvas.css" rel="stylesheet">
+    <link href="resources/custom2014.css" rel="stylesheet">
+    <link href="resources/twentytwenty.css" rel="stylesheet" type="text/css" />
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<style type="text/css">
+  code {
+  font-family: monospace;
+}
+</style>
+<style>
+body {font-family: Arial;}
+
+/* Style the tab */
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+/* Style the buttons inside the tab */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+  font-size: 17px;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+</style>
+
+
+<body>
+
+<div class="container headerBar">
+		<h1>Report - Christian Knieling</h1>
+      <p>nethz: knielinc Stud-id:14-923-809</p>
+</div>
+
+<div class="container contentWrapper">
+<div class="pageContent">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Proposal')">Proposal</button>
+  <button class="tablinks" onclick="openTab(event, 'Modelling')">Modelling</button>
+  <button class="tablinks" onclick="openTab(event, 'Textures')">Textures</button>
+  <button class="tablinks" onclick="openTab(event, 'Normals')">Bump Mapping</button>
+  <button class="tablinks" onclick="openTab(event, 'Denoising')">Denoising</button>
+  <button class="tablinks" onclick="openTab(event, 'Environment')">Environment Maps</button>
+  <button class="tablinks" onclick="openTab(event, 'Disney')">Disney BSDF</button>
+  <button class="tablinks" onclick="openTab(event, 'Final')">Final Image</button>
+</div>
+	<!-- ================================================================= -->
+  <div id="Proposal" class="tabcontent">
+      <h2>Motivational Image</h2>
+    <p>The image is a simple blender render by myself, because I didn't find anything similar online</p>
+  <img src="images/volley.png" width="100%" alt="Test results"/> <br> <br> <br> <br>
+  <p>The main idea was to model the receive in volleyball, but not everything is what it seems.</p>
+
+  <h2> Features used </h2>
+  <h3> 5pts </h3>
+  <p>Modelling of own mesh (trees, net, ball (human model will probably be imported))</p>
+  <p>Texturing of ground/stones/tree/leaves with images</p>
+  <p>Bump/Normal mapping to give scene more details</p>
+
+  <h3> 15pts </h3>
+  <p> Moderate Denoising (NL-means)</p>
+  <p> Environment Map Emitter for better lighting and background/sky</p>
+  <p> Disney Bsdf for different types of materials (all except for sheen, sheen tint and coat glossy)</p>
+  <p> It should be possible to emulate the missing materials by using clear coat and roughness</p>
+
+  </div>
+
+  <div id="Modelling" class="tabcontent">
+    <h2> Mesh </h2>
+        <p> All meshes except for the boat and the volleyball player were modelled by me in blender. You can see the volleyball mesh being created below as an examle.</p>
+        <p>
+          <a href="https://free3d.com/3d-model/femalebeachvolleyball-readystance-v1--93579.html">player</a><br>
+          <a href="https://free3d.com/3d-model/boat-v2--225787.html">boat</a><br>
+        </p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/volley_blender_array.png" alt="blender">
+    </div>
+  </div>
+
+  <div id="Textures" class="tabcontent">
+    <h2> Texture Mapping </h2>
+    <p>For the implementation of texture mapping in nori I copy and extended the <code>checkerboard.cpp</code> <br>
+      file with the functionality to store a bitmap and sample from that instead of the checkerboard pattern.<br>
+      Because I load exr files with the <code>bitmap.h</code> header, I need to transfom my color values to<br>
+      linearRGB before returning it in the eval function.<br>
+      Because I use textures as normalmaps aswell, i simply added a boolean to switch when we need to convert<br>
+      and when we don't<br>
+      I don't support color blending, simply because I don't like the smoothing artefacts when blending between<br>
+      two pixels.<br>
+      Also I initially wanted to go for a lowpoly theme, and therefore wanted to support true pixel bitmaps, <br>
+      but nevertheless changed my style to a more cartoonish version later. <br>
+      <br>
+      Changes made to the eval function of checkerboard.cpp:<br>
+    </p>
+    <pre><code>
+        virtual T eval(const Point2f & uv) override {
+          Point2f scaledUV = (uv).cwiseQuotient(m_scale);
+
+          int x = floor((scaledUV).x() * w - m_delta.x() + 1.f);
+          x = x % w;
+          int y = floor((1-(scaledUV).y()) * h + m_delta.y() - 1.f);
+          y = (h + ((y) % h)) % h;
+          //row then col therefore x and y are swapped
+          if (m_isNormalMap)
+            return bitmap(y,x);
+          return bitmap(y,x).toLinearRGB();
+        }
+    </code></pre>
+
+    <p> Comparison of my texture mapping against mitsuba:</p>
+    <div class="twentytwenty-container">
+        <img src="images/mine/nori_planetexture.png" alt="nori" class="img-responsive">
+        <img src="images/reference/mitsuba_planetexture.png" alt="mitsuba" class="img-responsive">
+    </div>
+    <div class="twentytwenty-container">
+      <img src="images/mine/wood_albedo.png" alt="texture" class="img-responsive">
+    </div>
+    <p><a href="https://3dtextures.me/2019/11/28/wood-acoustic-panel-001/"> source</a></p>
+  </div>
+
+  <div id="Normals" class="tabcontent">
+    <h2> Bump Mapping </h2>
+    <p>
+      Bump-/Normal Mapping turned out to be much more involved, than I initially anticipated.<br>
+      While it is true that we "simply" have to transform the normals in <code>mesh.cpp</code><br>
+      to be <code>localnormal = colorval(x,y) * 2.f - Vector3f(1.f)</code>, we are not given<br>
+      a local coordinate frame that alignes with the uv coordinates.<br>
+      Therefore I needed to recompute a new frame with its tangent frame being perpendicular<br>
+      to the uv-coordinates. <br>
+      I followed <a href="http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/">this</a> implementation in order to compute the tangent space for a triangulated mesh.<br>
+      For <code>sphere.cpp</code> I followed the convention of <a href="http://mathworld.wolfram.com/SphericalCoordinates.html"> wolfram</a> of a local coordinate frame.<br> 
+      <br>
+      Because my disney shader allows for anisotropic materials, i set the tangent frame outside of<br>
+      the <code>if(m_normalmap)</code>.<br> 
+      Sadly I can't keep this tangent frame after I computed the new normal, because it will nolonger be<br>
+      perpendicular to the pertubed normal of the normal map.<br>
+      I would compute a new tangent frame that alignes with the uv-map, but that is not possible,<br>
+      because the crossproduct of the two uv directions will always compute to the initial face normal vector.<br>
+      Therefore it's either or...<br>
+      I therefore compute a frame where the projection of one of the tangent vectors alignes with<br>
+      one of the uv-coordinates and the other one is their cross product.<br>
+
+      Below you can see the implementation added to <code>mesh.cpp</code> in the <code>setHitInformation()</code> function.<br> 
+      And under that is a comparison of nori with mitsuba with the direct integrator.<br>
+      The sphere in the middle is an actual sphere and the rest is a plane with <a href="https://commons.wikimedia.org/wiki/File:Normal_map_example_with_scene_and_result.png#/media/File:Normal_map_example_-_Map.png">this</a> normal map.<br>
+      Under that you can see the sphere and the normal map rendered with the direct integrator and next to it<br>
+      is the same scene with the normal map as a texture to compare.<br>
+      Because the plane is slightly pertubed, the color is slightly shifted there.<br> 
+    </p>
+
+    <pre><code>
+        its.shFrame = Frame(
+        (bary.x() * m_N.col(idx0) +
+         bary.y() * m_N.col(idx1) +
+         bary.z() * m_N.col(idx2)).normalized());
+
+        Vector3f deltaPos1 = (p1 - p0);
+        Vector3f deltaPos2 = (p2 - p0);
+        Vector2f deltaUV1 = (m_UV.col(idx1) - m_UV.col(idx0));
+        Vector2f deltaUV2 = (m_UV.col(idx2) - m_UV.col(idx0));
+
+        float r = 1.0f / (deltaUV1.x() * deltaUV2.y() - deltaUV1.y() * deltaUV2.x());
+        its.shFrame.s = (deltaPos1 * deltaUV2.y() - deltaPos2 * deltaUV1.y())*r;
+        its.shFrame.s.normalize();
+        its.shFrame.s -= its.shFrame.s.dot(its.shFrame.n) * its.shFrame.n;
+        its.shFrame.s.normalize();
+
+        its.shFrame.t = its.shFrame.n.cross(its.shFrame.s).normalized();
+        if (m_normalmap) {
+
+          Color3f normalcolor = m_normalmap->eval(its.uv);
+
+          Vector3f normal = Vector3f(normalcolor.r(), normalcolor.g(), normalcolor.b());
+          normal = normal * 2 - Vector3f(1.f);
+          normal[2] = normal.z();
+          Frame result;
+
+          Vector3f normal_old = its.shFrame.n;
+          result.n = its.shFrame.toWorld(normal).normalized();
+          its.shFrame = Frame(result.n);
+          its.shFrame.s -= its.shFrame.s.dot(its.shFrame.n) * its.shFrame.n;
+          its.shFrame.s.normalize();
+
+          its.shFrame.t = its.shFrame.n.cross(its.shFrame.s).normalized();
+        }
+    </code></pre>
+      <div class="twentytwenty-container">
+        <img src="images/mine/nori_plane_normal.png" alt="nori" class="img-responsive">
+        <img src="images/reference/mitsuba_plane_normal.png" alt="mitsuba" class="img-responsive">
+        <img src="images/mine/nori_plane_normal_normalintegrator.png" alt="normals" class="img-responsive">
+        <img src="images/mine/nori_plane_normal_as_tex.png" alt="normal_as_tex" class="img-responsive">
+    </div>
+  </div>
+
+  <div id="Denoising" class="tabcontent">
+    <h2> NL-Means </h2>
+    <p>For the implementation of the nl-means i follow the<br>
+    code given in the slides for fast nl-means, where we use convolutions<br>
+    in order to speed up summation and avoid recurring computations.<br>
+    I will not go too much into detail how it works, because the code is almost identical to<br>
+    the pseudocode that was given.<br>
+    But generally I loop over the radius <code>r</code> where I compare the patches with radius <code>f</code><br>
+    to each other patch and compute its distance<br>
+    Before I compute anything I pad the data using <code>padarray(dat, [r, r], 'summetric')</code><br>
+     so that the edges don't suffer from artifacts after blurring.<br>
+    Initially I used <code>imtranslate(dat,[dx,dy])</code>, but it appeared <code>circshift</code> is actually faster in getting the shifted image.<br>
+    The distance was given in the slides as:<br>
+    <pre><code>
+      d2pixel = ((patchdiff.^2)-(datvar + min(datvar,var_ngb)))...
+                                ./(eps + k^2 * (datvar + var_ngb));
+    </code></pre>
+    This distance is summed together over the patch in order to compute the mean distance<br>
+    With a box filter of size <code>(2*f+1)^2</code>.<br>
+    Using this distance compute the weights and sum them up again using a box filter of size <code>(2*f-1)</code>.<br>
+    Why we don't use the same sizes is actually unclear to me, but i simply followed the given implementation.<br>
+    <br>
+    Below is the matlab code: </p>
+    <pre><code>
+      var i: Integer;
+      function [denoised_img] = nl_means_fast(dat, datvar, f, r, k) 
+          m = size(dat,1);
+          n = size(dat,2);
+          
+          %pad image so we don't get problems at the border
+          dat = padarray(dat,[r r],'symmetric');
+          datvar = padarray(datvar,[r r],'symmetric');
+          
+          flt = zeros(size(dat));
+          wgtsum = zeros(size(dat));
+
+          % Used kernels
+          sidelength  = (2 * f + 1);
+          sidelength_ = (2 * f - 1);
+
+          box_f        = ones(sidelength,sidelength)   ...
+                         / (sidelength * sidelength);
+          box_f_minus1 = ones(sidelength_,sidelength_) ...
+                         / ((sidelength_) * (sidelength_));
+          for dx = -r:r
+              t1 = clock;
+              for dy = -r:r
+          %         if dx ~= 0 || dy ~= 0
+                      %translate image
+                      ngb = circshift(dat,[dx, dy]);
+                      var_ngb = circshift(datvar,[dx, dy]);
+                      %compute difference
+                      patchdiff = dat - ngb;
+                      %compute d2 distance (not summed up yet)
+                      d2pixel = ((patchdiff.^2)-(datvar + min(datvar,var_ngb)))...
+                                ./(eps + k^2 * (datvar + var_ngb));
+                      %average contribution over colors
+                      d2pixel = (1/3) * (d2pixel(:,:,1) ...
+                                       + d2pixel(:,:,2) ...
+                                       + d2pixel(:,:,3));
+                                   
+                      %apply box filter to sum different 
+                      %d2 patches into respective pixel
+                      d2patch = imfilter(d2pixel, box_f);
+                      %compute weight by applying exp function
+                      wgt = exp(-max(0,d2patch));
+                      %apply box filter to sum over 
+                      wgt = imfilter(wgt, box_f_minus1);
+                      flt = flt + wgt .* ngb;
+                      wgtsum = wgtsum + wgt;
+          %             imshow(flt ./ wgtsum);
+          %         end
+              end
+              t2 = clock;
+              t11=datevec(datenum(t1));
+              t22=datevec(datenum(t2));
+              time_interval_in_seconds = etime(t22,t11);
+              fprintf('%i%% ', floor(100 * ((r + dx) / (2*r))));
+              fprintf('%i seconds left\n',floor((2*r - (r + dx)) ...
+                      * time_interval_in_seconds));
+          end
+          flt = flt ./ wgtsum;
+          denoised_img = flt((r+1):(r+m),(r+1):(r+n),:);
+      end
+    </code></pre>
+
+    <p> In order to estimate the variance of the rendered image<br>
+        I start by outputting two images in nori. <br>
+        Each image is created by using the first half or last<br>
+        half of all samples respectively.<br>
+        <br>
+        The variance is then estimated with <br>
+        <code>(dat_h1 - dat_h2)^2 ./4 </code>.<br>
+        <br>
+        Because this estimation often is spotty and incomplete, <br>
+        I start by running nl_means over my estimated variances first.<br>
+        Then I use these smoothed variances in order to run nl_means<br>
+        a second time, but this time over my image.<br>
+        <br>
+        I tried calculating the variance directly in nori by extracting<br>
+        the sum of squared values and sum of values in the render.cpp file.<br>
+        But the resulting variance seemed to be cut off by rounding effects,<br>
+        or my implementation had a bug I couldn't find...<br>
+        I estimated the variance with:<br>
+        <code>
+          variance(x,y) = (sum_of_squares(x,y) - 1/n * sum_of_values(x,y).pow(2))/((n-1) * n)
+        </code><br>
+        or
+        <code>
+          variance(x,y) = (sum_of_squares(x,y) - numSamples * bitmap(x,y))/((n-1) * n)
+        </code><br>
+        respectively.<br>
+        The values of the saved .exr image however contained a lot of zeroes.. maybe <br>
+        I read the values out of nori incorrectly due to parallelism.<br>
+        <br>
+        However, extracting the variance like explained earlier seemed to be more than<br>
+        sufficient for my needs, so I decided to stick with it<br>
+        <br>
+        Below is now the Matlab code together with the results I got on an early version of my<br>
+        final image.<br>
+        <br>
+        Final remark: in order to enable/disable the output of the image with half of the samples<br>
+        the lines <code>229</code> and <code>230</code> have to be commented in/out.<br>
+
+      </p>
+
+    <pre><code>
+      dat = im2double(imread('E:\GitHub\nori3\scenes\finalscene\final.png'));
+      dat_h1 = im2double(imread('E:\GitHub\nori3\scenes\finalscene\final_h1.png'));
+      dat_h2 = im2double(imread('E:\GitHub\nori3\scenes\finalscene\final_h2.png'));
+
+      datvar = (dat_h1 - dat_h2).^2 ./4;
+
+      % imshow(I);
+      r = 10;
+      f = 3;
+      k = .45;
+      datvar_var = datvar * 0 + 0.01;
+      datvar = nl_means_fast(datvar, datvar_var, 2, r, k);
+
+      denoised_img = nl_means_fast(dat, datvar, f, r, k); 
+
+      %figure;
+      imwrite(dat,"noisy.png");
+
+      imwrite(denoised_img,"denoised.png");
+      imshow(denoised_img);
+    </code></pre>
+
+    <div class="twentytwenty-container">
+        <img src="images/mine/denoised.png" alt="denoised" class="img-responsive">
+        <img src="images/mine/noisy.png" alt="src" class="img-responsive">
+    </div>
+    <p>Denoising on final image:</p>
+    <div class="twentytwenty-container">
+        <img src="images/mine/denoised_final.png" alt="denoised" class="img-responsive">
+        <img src="images/mine/final.png" alt="src" class="img-responsive">
+    </div>
+  </div>
+
+  <div id="Environment" class="tabcontent">
+    <h2> Environment Map </h2>
+    <p>
+      My implementation of the environment map is a descendant of the <code>Emitter</code> class<br>
+      and generally follows the <a href="http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources.html#InfiniteAreaLights">pbrt</a> implementation.<br>
+      In the initialization of <code>envmap.cpp</code> I loop over the values of my input image (latitude-longitude mapping of surrounding to rectangular image)<br>
+      and store the <code>color.getLuminance</code> value multiplied by <code>sintheta = (y + 0.5)/height * PI</code> in an array.<br>
+      I use a vector of the <code>DiscretePDF</code> class, that was available in the source already,<br>
+      in order to store those values.<br>
+      The <code>DiscretePDF</code> class comes in quite handy, because it provides a <code>sample</code> and a <code>getCoeff</code> function <br>
+      After having computed all the altered luminance values, I normalize each row and an additional column,<br>
+      which represents the pdf function of sampling a specific row(marginal).<br>
+      The marginal is the normalized vector of the sums of all values in each row.<br>
+      The matrix(or vector of <code>DiscretePDF</code>) is then the conditional PDF of sampling a certain column, given the row.<br>
+      <br>
+
+    </p>
+
+    <pre><code>
+          //calculate luminance like in the slidedeck 08 slide 43/43
+          pdfX = std::vector<DiscretePDF>(h,DiscretePDF(w));
+          for (int i = 0; i < h; ++i) {
+            pdfX[i].reserve(w);
+          }
+          pdfY = DiscretePDF(h);
+          pdfY.reserve(h);
+          m_pdfX = std::vector<float>(w*h, 0.f);
+          m_pdfY = std::vector<float>(h, 0.f);
+          float totalsum = 0;
+          for (int y = 0; y < h; ++y) {
+            float theta = ((float)y + 0.5f) / (float)h * M_PI;
+            float sintheta = std::sin(theta);
+
+            for (int x = 0; x < w; ++x) {
+              float luminance = bitmap(y, x).getLuminance() * sintheta;
+              pdfX[y].append(luminance);
+            }
+          }
+
+          for (int y = 0; y < h; ++y) {
+            pdfX[y].normalize();
+
+            pdfY.append(pdfX[y].getSum());
+          }
+          pdfY.normalize();
+    </code></pre>
+
+    <p>
+      Below I will explain the <code>eval</code>, <code>pdf</code> and <code>sample</code> functions.<br>
+      To avoid code duplication, I implemented the <code>toPixelPos</code> and <code>pixelPostoDir</code> helper functions.<br>
+      They transform image positions and world directions back and forth.<br>
+      The <code>eval</code> function is probably the easiest one to implement, because it<br>
+      only has to retun the linearly interpolated pixel values on the original environment map bitmap.<br>
+      <br>
+      code:
+      <pre><code>
+          Color3f eval(const EmitterQueryRecord &lRec) const {
+          Vector3f out = lRec.wi.normalized();
+          Point2f coords = toPixelPos(m_tolocal * out, w, h);
+
+          float x = coords.x();
+          float y = coords.y();
+
+          float floorX = std::floor(x);
+          float floorY = std::floor(y);
+          float ceilX = std::ceil(x);
+          float ceilY = std::ceil(y);
+
+          Color3f fXfY = bitmap(int(floorY), int(floorX));
+          Color3f cXfY = bitmap(int(floorY), int(ceilX));
+          Color3f fXcY = bitmap(int(ceilY), int(floorX));
+          Color3f cXcY = bitmap(int(ceilY), int(ceilX));
+
+          Color3f col_floorY, col_ceilY;
+          col_floorY = lerp_(x - floorX, fXfY, cXfY);
+          col_ceilY = lerp_(x - floorX, fXcY, cXcY);
+
+          Color3f final = lerp_(y - floorY, col_floorY, col_ceilY);
+
+          return final;
+        }
+      </code></pre>
+
+      The <code>pdf</code> function retunes the marginal pdf distribution value times<br>
+      the conditional distribution value, computed in the initialization step.<br>
+      In order to make it correct it also has to be multiplied with<br>
+      <code>2*PI*sin(theta)</code> (see the <a href="http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources.html#InfiniteAreaLights">pbrt</a> documentation for further details).<br>
+      <br>
+      code:
+      <pre><code>
+        float pdf(const EmitterQueryRecord &lRec) const {
+          Vector3f out = lRec.wi.normalized();
+          Point2f coords = toPixelPos(m_tolocal * out, w, h);
+
+          float x = coords.x();
+          float y = coords.y();
+
+          float floorX = std::floor(x);
+          float floorY = std::floor(y);
+          float ceilX = std::ceil(x);
+          float ceilY = std::ceil(y);
+
+          float fXfY = pdfX[floorY][floorX] * pdfY[floorY];
+          float fXcY = pdfX[ceilY][floorX] * pdfY[ceilY];
+          float cXcY = pdfX[ceilY][ceilX] * pdfY[ceilY];
+
+          float pdf_floorY, pdf_ceilY;
+          pdf_floorY = lerp(x - floorX, fXfY, cXfY);
+          pdf_ceilY = lerp(x - floorX, fXcY, cXcY);
+
+          float pdf = lerp(y - floorY, pdf_floorY, pdf_ceilY);
+          float sintheta = sin(acos(out.z()));
+          if (sintheta == 0.0f)
+          {
+            return 0.0f;
+          }
+          return (pdf * w * h) / (2 * M_PI * M_PI * sintheta);
+        }
+      </code></pre>
+      Finally the <code>sample</code> method now has to combine everything.<br>
+      Given a random number with the <code>sample</code> input I now sample <br>
+      a y position on the bitmap from the marginal pdf distribution.<br>
+      This sample, combined with the other random value is then used<br>
+      to draw another sample for the x position.<br>
+      With my helper function I convert this position back to a direction<br>
+      and store it in <code>lRec.wi</code>.<br>
+      The normal direction in then in the inverse direction.<br>
+      (From the inside of an infinately large sphere)<br>
+      The shadowray is a ray that follows the light direction from the reference point.<br>
+      Lastly I compute the sampled radiance divided by the pdf and return it.<br>
+      <br>
+      code:
+      <pre><code>
+        Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample) const {
+            float sample_x = sample.x();
+            float sample_y = sample.y();
+
+            float y = pdfY.sampleReuse(sample_x);
+            float x = pdfX[y].sampleReuse(sample_y);
+
+            float phi = 2.f * M_PI * (x / float(w-1) - 0.5f);
+            float theta = y * M_PI / float(h-1);
+
+            lRec.wi = m_toworld * pixelPostoDir(Point2f(x,y),w,h);
+            lRec.n = -lRec.wi;
+            
+            Ray3f shadowRay(lRec.ref, lRec.wi);
+            lRec.shadowRay = shadowRay;
+
+            float pdfval = pdf(lRec);
+
+            if (pdfval == 0.0f)
+            {
+              return Color3f(0.0f);
+            }
+
+            if (sin(theta) != 0.0f)
+            {
+              lRec.pdf = pdfval;
+            }
+            else
+            {
+              return Color3f(0.0f);
+            }
+            Color3f radiance = eval(lRec);
+            if (!radiance.isValid())
+            {
+              return Color3f(0.0f);
+            }
+
+            return radiance / pdf(lRec);
+          }
+
+          Color3f eval(const EmitterQueryRecord &lRec) const {
+            Vector3f out = lRec.wi.normalized();
+            Point2f coords = toPixelPos(m_tolocal * out, w, h);
+
+            float x = coords.x();
+            float y = coords.y();
+
+            float floorX = std::floor(x);
+            float floorY = std::floor(y);
+            float ceilX = std::ceil(x);
+            float ceilY = std::ceil(y);
+
+            Color3f fXfY = bitmap(int(floorY), int(floorX));
+            Color3f cXfY = bitmap(int(floorY), int(ceilX));
+            Color3f fXcY = bitmap(int(ceilY), int(floorX));
+            Color3f cXcY = bitmap(int(ceilY), int(ceilX));
+
+            Color3f col_floorY, col_ceilY;
+            col_floorY = lerp_(x - floorX, fXfY, cXfY);
+            col_ceilY = lerp_(x - floorX, fXcY, cXcY);
+
+            Color3f final = lerp_(y - floorY, col_floorY, col_ceilY);
+
+            return final;
+          }
+        </code></pre>
+        <br>
+        The only thing left to do is to alter <code>path_mis.cpp</code> to work with environment maps.<br>
+        When a ray intersects with nothing I return <code>Li += t * w_mat * envmap->eval()</code>.<br>
+        Whenever a ray sample from the brdf does not intersect with any mesh,<br>
+        the pdf for that direction of the environment map has to be extracted.<br>
+        That summs the implementation for environment maps up.<br>
+        Below is an image of 5000 random samples drawn from a environment map.<br>
+    </p>
+    <div class="twentytwenty-container">
+      <img src="images/mine/envmap.png" alt="envmap" class="img-responsive">
+      <img src="images/mine/envmap_sampling.png" alt="sampling" class="img-responsive">
+    </div>
+    Below is an image comparing a scene with a diffuse material in nori to mitsuba in order to validate the path_mis implementation. (128spp)<br>
+    <div class="twentytwenty-container">
+      <img src="images/mine/nori_envmap.png" alt="nori" class="img-responsive">
+      <img src="images/reference/mitsuba_envmap.png" alt="mitsuba" class="img-responsive">
+    </div>
+  </div>
+
+  <div id="Disney" class="tabcontent">
+    <h2> Disney BSDF </h2>
+    <p>
+      For the implementation of the Disney BSDF i followed the description from the <a href="https://disney-animation.s3.amazonaws.com/library/s2012_pbs_disney_brdf_notes_v2.pdf">paper</a>.<br>
+      For additional infos and missing details i looked at their <a href="https://github.com/wdas/brdf/blob/master/src/brdfs/disney.brdf">shader</a>.<br>
+      The description for their implementation of the Disney BSDF was for some parts very detailed<br>
+      and other parts were only mentioned briefly or omitted completely.<br>
+      Therefore my implementation for the eval funciton closely follows the given <a href="https://github.com/wdas/brdf/blob/master/src/brdfs/disney.brdf">shader</a>.<br>
+      The disney BSDF in general is a BSDF made for artists in order to control<br>
+      many different material parameters in one single BSDF with values that<br>
+      intuitively make sense.<br>
+      In other words all parameters for all material properties should fit into the [0,1] range<br>
+      <br>
+    </p>
+    <h3>Evaluation</h3>
+    <h4>Diffuse/Roughness</h4>
+      <p>
+        For the diffuse model they added a fresnel effect.<br>
+        (positions with normalangles perpendicular to viewing ray will reflect more).<br>
+        They interpolate between a stronger fresnel effect when using a rougher material<br>
+        and a more diffuse Fresnel shadow for smooth surfaces.<br> 
+        <pre><code>
+          float SchlickFresnel(float cosTheta) {
+          float m = clamp(1.f - cosTheta, 0.f, 1.f);
+          return powf(m, 5);
+        }
+        </code></pre>
+        fresnel_diffuse calculation:
+        <code><pre>
+          //add fresnel to diffuse
+          //L = wo, V = wi
+          float fresnelL = SchlickFresnel(costhetaL);
+          float fresnelV = SchlickFresnel(costhetaV);
+          float f_D90 = 0.5f + 2.f * LdotH * LdotH * m_roughness;
+          float fresnel_diffuse = lerp(fresnelL, 1.0f, f_D90) * lerp(fresnelV, 1.0f, f_D90);
+        </code></pre>
+      </p>
+    <h4>Subsurface</h4>
+      <p>
+        For the Subsurface model they use an approximation, that only works well for objects<br>
+        that are either far away or where the scattering path is small.<br>
+        It also doesn't account for lightbleed through surfaces.<br>
+        The subsurface factor then blends between a model introduced by Hanrahan-Krueger and the diffuse value.<br>
+        <code><pre>
+          // subsurface
+          //L = wo, V = wi
+          float f_ss90 = LdotH * LdotH* m_roughness;
+          float fresnel_subsurface = lerp(fresnelL, 1.0f, f_ss90) * lerp(fresnelV, 1.0f, f_ss90);
+          float subsurface = 1.25f * (fresnel_subsurface * (1.f / (costhetaL + costhetaV) - .5f) + .5f);
+        </code></pre>
+      </p>
+    <h4>Specular/Anisotropic</h4>
+      <p>
+        In order to model specular surfaces disney uses a microfaces model with the<br>
+        generalized Trowbridge-Reiz (GTR) normal distribution. <br>
+        The specular part uses a anisotropic version of GTR with gamma = 2.<br>
+        For the shadowing part they use the smithG_GGX distribution here.<br>
+        <code><pre>
+          // specular
+          float aspect = sqrt(1 - m_anisotropic * .9f);
+          float ax = std::max(.001f, (m_roughness * m_roughness) / aspect);
+          float ay = std::max(.001f, (m_roughness * m_roughness) * aspect);
+          //assuming N = 0 0 1, X = 1 0 0, Y = 0 1 0
+          float distribution_specular = Warp::squareToGTR2AnisoPdf(wh, ax, ay) / cosThetaH;
+          float fresnel_wh = SchlickFresnel(LdotH);
+          Color3f fresnel_specular = lerp(fresnel_wh, specular_color, Color3f(1));
+          float shadowing_fractor_specular;
+          shadowing_fractor_specular = smithG_GGX_aniso(costhetaL, L.dot(X), L.dot(Y), ax, ay);
+          shadowing_fractor_specular *= smithG_GGX_aniso(costhetaV, V.dot(X), V.dot(Y), ax, ay);
+        </code></pre>
+      </p>
+    <h4>Clearcoat/ClearcoatGloss</h4>
+      <p>
+        The clearcoat pars is distributed with GTR1 (gamma = 1).<br>
+        For the shadowing part they also use the smithG_GGX distribution here.<br>
+        (The non anisotropic version)<br>
+        Apparently the hardcoded values they used for <code>fresnel_clearcoat</code> represents a plastic material.<br>
+        <pre><code>
+          // clearcoat (ior = 1.5 -> F0 = 0.04)
+          float distribution_clearcoat = Warp::squareToGTR1Pdf(wh, lerp(m_clearcoatGloss, .1f, .001f)) / cosThetaH;
+          float fresnel_clearcoat = lerp(fresnel_wh, .04f, 1.0f);
+          float shadowing_factor_clearcoat = smithG_GGX(costhetaL, .25f) * smithG_GGX(costhetaV, .25f);
+        </code></pre>
+      </p>
+    
+    <h4>Sheen/SpecularTint</h4>
+      <p>
+        In order to add sheen, they interpolate between <code>tint_color</code> and white.
+        SpecularTint is also just an interpolation between color values, <br>
+        later used in the specular fresnel part (as seen before).<br> 
+        <code><pre>
+          float luminance_color = .3f*albedo[0] + .6f*albedo[1] + .1f*albedo[2]; // luminance approx.
+
+          Color3f tint_color;
+          // normalize lum. to isolate hue+sat
+          if (luminance_color > 0) {
+            tint_color = albedo / luminance_color;
+          }
+          else {
+            tint_color = Color3f(1.f);
+          }
+          Color3f specular_color = lerp(m_metallic, m_specular * .08f * lerp(m_specularTint, Color3f(1), tint_color), albedo);
+          Color3f sheen_color = lerp(m_sheenTint, Color3f(1), tint_color);
+
+          // sheen
+          Color3f fresnel_sheen = fresnel_wh * m_sheen * sheen_color;
+        </code></pre>
+      </p>
+      <h4>Metallic/Final Blend</h4>
+      <p>
+        Finally in order to blend between the metallic part and diffuse part,<br>
+        they omit the diffuse part for very metallic objects and leave the specular<br>
+        and clearcoat channels.<br>
+        For non-metallic (diffuse) materials it is still possible to add a specular and sheen,<br>
+        because they are not scaled with m_metallic.<br>
+        Because the standard value for the clearcoat channel seemed to be too low in my tests<br>
+        to be very noticable, i multiplied the factor by 3 instead of .25 and got much better results.<br>
+        <code><pre>
+        Color3f out = ((INV_PI)* lerp(m_subsurface, fresnel_diffuse, subsurface)*albedo + fresnel_sheen) * (1 - m_metallic) + 
+                      shadowing_fractor_specular * fresnel_specular * distribution_specular + 
+                      3.f * m_clearcoat * shadowing_factor_clearcoat * fresnel_clearcoat * distribution_clearcoat;
+
+        </code></pre>
+      </p>
+    <h3>PDF</h3>
+    <p>
+      The disney paper uses three different distributions for their material.<br>
+      (diffuse = cosine weighted hemisphere, specular = GTR2 anisotropic, clearcoat = GTR1).<br>
+      However I couldn't find out how the sampling between them was weighted simply with the<br>
+      disney paper and used the same sampling strategy explained by <a href="http://simon-kallweit.me/rendercompo2015/report/#disneybrdf">Simon Kallweit</a><br>
+      in his implementation of the disney shader for the CG course in 2015.<br>
+      This means that the probability to sample from the diffuse part is<br>
+      <code>float diffuse_ratio = (1.f - m_metallic) * 0.5f;</code><br>
+      and the conditional probability to sample from the specular part is<br>
+      <code>float GTR2Aniso_ratio = 1.f / (1.f + m_clearcoat);</code>.<br>
+      For the pdf i simply weigh the pdf of each distribution with the according weights<br>
+      and output the result as a total probability density funciton.<br>
+      <pre><code>
+        virtual float pdf(const BSDFQueryRecord &bRec) const override {
+
+          Vector3f wh = (bRec.wi + bRec.wo).normalized();
+
+          float diffuse_ratio = (1.f - m_metallic) * 0.5f;
+          float GTR2Aniso_ratio = 1.f / (1.f + m_clearcoat);
+
+          float aspect = sqrt(1 - m_anisotropic * .9f);
+          float ax = std::max(.001f, (m_roughness * m_roughness) / aspect);
+          float ay = std::max(.001f, (m_roughness * m_roughness) * aspect);
+          //return Frame::cosTheta(bRec.wo) * INV_PI;
+          float Jh = 1;
+          if (wh.dot(bRec.wo) != 0) {
+            Jh = 1 / abs((4 * (wh.dot(bRec.wo))));
+          }
+          float diffuse_part = Frame::cosTheta(bRec.wo) * INV_PI;
+          float aniso_part = Warp::squareToGTR2AnisoPdf(wh, ax, ay) * Jh;
+          float clearcoat_part = Warp::squareToGTR1Pdf(wh, lerp(m_clearcoatGloss, .1, .001)) * Jh;
+          float out = lerp(diffuse_ratio, lerp(GTR2Aniso_ratio, clearcoat_part, aniso_part), diffuse_part);
+          return out;
+        }
+      </code></pre>
+    </p>
+
+
+    <h3>Sampling</h3>
+    <p>
+      With the above mentioned sampling strategy I need to randomly choose<br>
+      from the 3 distribution functions with a probability weighted according to<br>
+      their respective probabilities.<br>
+      This is done using the same "russian roulette" sampling strategy used for the<br>
+      microfaces BSDF implemented troughout the course.<br>
+      <br>
+      <pre><code>
+        virtual Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const override {
+            if (Frame::cosTheta(bRec.wi) <= 0)
+              return Color3f(0.0f);
+
+            bRec.measure = ESolidAngle;
+
+            float diffuse_ratio = (1 - m_metallic)*.5f;
+            float sample_x = sample.x();
+            float sample_y = sample.y();
+
+            if (sample_x < diffuse_ratio) {
+              sample_x /= diffuse_ratio;
+              bRec.wo = Warp::squareToCosineHemisphere(Point2f(sample_x, sample_y));
+            }
+            else {
+              sample_x = (1 - sample_x) / (1 - diffuse_ratio);
+
+              float GTR2Aniso_ratio = 1 / (1 + m_clearcoat);
+              if (sample_x < GTR2Aniso_ratio) {
+                sample_x /= GTR2Aniso_ratio;
+
+                float aspect = sqrt(1 - m_anisotropic * .9f);
+                float ax = std::max(.001f, (m_roughness * m_roughness) / aspect);
+                float ay = std::max(.001f, (m_roughness * m_roughness) * aspect);
+                Vector3f h = Warp::squareToGTR2Aniso(Point2f(sample_x, sample_y), ax, ay);
+                bRec.wo = ((2.f * h.dot(bRec.wi) * h) - bRec.wi).normalized();
+              }
+              else {
+                sample_x = (sample_x - GTR2Aniso_ratio) / (1 - GTR2Aniso_ratio);
+                Vector3f h = Warp::squareToGTR1(Point2f(sample_x, sample_y), lerp(m_clearcoatGloss, .1, .001));
+                bRec.wo = ((2.f * h.dot(bRec.wi) * h) - bRec.wi).normalized();
+              }
+            }
+            Color3f val = eval(bRec);
+            float pdfval = pdf(bRec);
+            if (Frame::cosTheta(bRec.wo) <= 0 || pdfval <= 0) {
+              return Color3f();
+            }
+
+            return val / pdfval * Frame::cosTheta(bRec.wo);
+          }
+      </code></pre>
+
+      In order to validate, that my implementation of the GTR1 and GTR2aniso are correct,<br>
+      I extended the warptest to support those functions.<br>
+    </p>
+    <p>Sampling with GTR1 and alpha = 0.1</p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/gtr1_01.png" alt="sampling">
+      <img src = "images/mine/gtr1_01_val.png" alt="chi2">
+    </div>
+    <p>Sampling with GTR1 and alpha = 0.7</p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/gtr1_07.png" alt="sampling">
+      <img src = "images/mine/gtr1_07_val.png" alt="chi2">
+    </div>
+    <p>Sampling with GTR2 anisotropic and alphax = alphay = 0.1</p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/gtr2aniso_01_01.png" alt="sampling">
+      <img src = "images/mine/gtr2aniso_01_01_val.png" alt="chi2">
+    </div>
+    <p>Sampling with GTR2 anisotropic and alphax = alphay = 0.5</p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/gtr2aniso_05_05.png" alt="sampling">
+      <img src = "images/mine/gtr2aniso_05_05_val.png" alt="chi2">
+    </div>
+    <p>Sampling with GTR2 anisotropic and alphax = 0.1, alphay = 0.7</p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/gtr2aniso_01_07.png" alt="sampling">
+      <img src = "images/mine/gtr2aniso_01_07_val.png" alt="chi2">
+    </div>
+  <h3>Results</h3>
+    <p>
+      Below is now an image where all the parameters are visualized.<br>
+      In order to keep the effort needed to make so many comparisons minimal, <br>
+      I made a single scene for this purpose.<br>
+      Therefore reflections of other spheres might appear and alter the output slightly.<br>
+      Nevertheless, each property can be nicely visualized, while some parameters have<br>
+      a larger and some have a smaller impact on how the results look like.<br>
+    </p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/disney.png" alt="disney_scene">
+    </div>
+  </div>
+
+  <div id="Final" class="tabcontent">
+    <h3> Design </h3>
+    <p>
+      I wanted to go with a bit of a stylized look, because going foto realistic is much<br>
+      harder to pull of well and I only have basic skills in modelling and composing.<br>
+      Also I thought a bit of a "comic style" would fit the general theme and makes it<br>
+      easier to create a surreal scene.<br>
+      After having experimented with a few ideas, I decided to fasten the net between a lamppost<br>
+      and a small boat.<br>
+      As a bit of visual flair I added an iceberg into which the boat crashes ;)<br>
+      As for composing, I made sure that the player and the volleyball are in the<br>
+      topleft and bottom right "third" of the image.<br>
+      Also the Iceberg with the boat fits pretty well into the left third, while<br>
+      the right side is left a little bit more open to give room for some finer details.<br>
+      As mentioned in the modelling part I modelled all meshes except for the boat and the<br>
+      volleyball player in blender and composed them there.<br>
+      I am probably most proud of my lantern.<br>
+      As a final touch I added the cgl logo as a light source hanged up on a stand over the water<br>
+      in the exact center of the image.<br>
+      At first I thought it might stand out too much, but I actually quite like the way it looks with the reflection.<br>
+    </p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/blender_scene.png" alt="blender_scene">
+    </div>    
+    <h3> Final Image </h3>
+      <p>
+      The final image is sampled with 1024pps (took about an hour in nori on a intel i7-8700k).<br>
+      Additionally it is denoised using NL-means.<br>
+      Sadly some details in the face of the Volleyball player are washed out a little bit.<br>
+      Overall I'm quite happy with the denoising results though.<br>
+      I think it was a good design decision to go for a cartoony look, because I believe potential<br>
+      smoothing artefacts stand out a little less. <br>
+    </p>
+    <div class ="twentytwenty-container"> 
+      <img src = "images/mine/denoised_final.png" alt="">
+    </div>    
+    <h3> Remark </h3>
+    <p> I took this course last year, but did not actually do the project and therefore did not implement any of the above mentioned features.</p>  
+  </div>   
+
+</div>
+</div>
+<!-- Bootstrap core JavaScript -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script src="resources/bootstrap.min.js"></script>
+<script src="/js/offcanvas.js"></script>
+<script src="resources/jquery.event.move.js"></script>
+<script src="resources/jquery.twentytwenty.js"></script>
+
+
+<script>
+function openTab(evt, tabname) {
+  var i, tabcontent, tablinks;
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+  document.getElementById(tabname).style.display = "block";
+  evt.currentTarget.className += " active";
+  $(window).trigger("resize.twentytwenty");
+
+}
+$(window).load(function(){$(".twentytwenty-container").twentytwenty({default_offset_pct: 0.5});});
+openTab(event, 'Proposal');
+
+</script>
+</body>
+</html>
